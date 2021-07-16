@@ -25,7 +25,16 @@
  * Function: Portable interface for each platform.
  * Created on: 2015-04-28
  */
- 
+#include <stdio.h>
+#include <string.h>
+#include <ProjectConfig.h>
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <SEGGER_RTT.h>
+#include <debug.h>
+
+static xSemaphoreHandle xSemaphore_elog = NULL; 
+
 #include <elog.h>
 
 /**
@@ -37,7 +46,19 @@ ElogErrCode elog_port_init(void) {
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
-    
+    xSemaphore_elog = xSemaphoreCreateMutex();
+    if(xSemaphore_elog == NULL)
+    {
+        //err("xSemaphoreCreateMutex error\n");
+        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex error\n");
+        result = -1;
+    }else
+    {
+        if(xSemaphoreGive(xSemaphore_elog) != pdTRUE)
+        {
+            SEGGER_RTT_printf(0, "warning: xSemaphoreGive\n");
+        }
+    }
     return result;
 }
 
@@ -60,7 +81,16 @@ void elog_port_deinit(void) {
 void elog_port_output(const char *log, size_t size) {
     
     /* add your code here */
+#ifdef ELOG_TERMINAL_ENABLE
+    SEGGER_RTT_printf(0,"%s",log);
+#endif
     
+    usbserialwrite(log, size);
+
+//#ifdef ELOG_FILE_ENABLE
+    /* write the file */
+    //elog_file_write(log, size);
+//#endif
 }
 
 /**
@@ -69,7 +99,11 @@ void elog_port_output(const char *log, size_t size) {
 void elog_port_output_lock(void) {
     
     /* add your code here */
-    
+    if(xSemaphore_elog != NULL)
+    {
+        //0 for in case of this been call in isr.
+        xSemaphoreTake(xSemaphore_elog,0);
+    }
 }
 
 /**
@@ -78,7 +112,10 @@ void elog_port_output_lock(void) {
 void elog_port_output_unlock(void) {
     
     /* add your code here */
-    
+    if(xSemaphore_elog != NULL)
+    {
+        xSemaphoreGive(xSemaphore_elog);
+    }
 }
 
 /**
@@ -89,7 +126,9 @@ void elog_port_output_unlock(void) {
 const char *elog_port_get_time(void) {
     
     /* add your code here */
-    
+    static char cur_system_time[16] = { 0 };
+    sprintf(cur_system_time, "%06d.%03d", get_tick()/1000,get_tick()%1000);
+    return cur_system_time;
 }
 
 /**
@@ -100,7 +139,7 @@ const char *elog_port_get_time(void) {
 const char *elog_port_get_p_info(void) {
     
     /* add your code here */
-    
+    return "";
 }
 
 /**
@@ -111,5 +150,5 @@ const char *elog_port_get_p_info(void) {
 const char *elog_port_get_t_info(void) {
     
     /* add your code here */
-    
+    return "";
 }
