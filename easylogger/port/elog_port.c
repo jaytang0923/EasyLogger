@@ -58,6 +58,7 @@ ElogErrCode elog_port_init(void) {
         {
             SEGGER_RTT_printf(0, "warning: xSemaphoreGive\n");
         }
+        elog_file_init();
     }
     return result;
 }

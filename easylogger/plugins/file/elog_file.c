@@ -34,10 +34,12 @@
 #include <string.h>
 
 #include "elog_file.h"
+#include "sys_littlefs.h"
 
 /* initialize OK flag */
 static bool init_ok = false;
-static FILE *fp = NULL;
+//static FILE *fp = NULL;
+static lfs_file_t fileelog,*fp = NULL;
 static ElogFileCfg local_cfg;
 
 ElogErrCode elog_file_init(void)
@@ -77,7 +79,8 @@ static bool elog_file_rotate(void)
     memcpy(oldpath, local_cfg.name, base);
     memcpy(newpath, local_cfg.name, base);
 
-    fclose(fp);
+    //fclose(fp);
+    sys_lfs_file_close(fp);
 
     for (n = local_cfg.max_rotate - 1; n >= 0; --n) {
         snprintf(oldpath + base, SUFFIX_LEN, n ? ".%d" : "", n - 1);
@@ -101,8 +104,9 @@ static bool elog_file_rotate(void)
 
 __exit:
     /* reopen the file */
-    fp = fopen(local_cfg.name, "a+");
-
+    //fp = fopen(local_cfg.name, "a+");
+    fp = &fileelog;
+    sys_lfs_file_open(fp, local_cfg.name, LFS_O_APPEND);
     return result;
 }
 
@@ -116,8 +120,10 @@ void elog_file_write(const char *log, size_t size)
 
     elog_file_port_lock();
 
-    fseek(fp, 0L, SEEK_END);
-    file_size = ftell(fp);
+    //fseek(fp, 0L, SEEK_END);
+    sys_lfs_file_seek(fp, 0, LFS_SEEK_END);
+    //file_size = ftell(fp);
+    file_size = sys_lfs_file_tell(fp);
 
     if (unlikely(file_size > local_cfg.max_size)) {
 #if ELOG_FILE_MAX_ROTATE > 0
@@ -129,10 +135,11 @@ void elog_file_write(const char *log, size_t size)
 #endif
     }
 
-    fwrite(log, size, 1, fp);
+    //fwrite(log, size, 1, fp);
+    sys_lfs_file_write(fp, log, size);
 
 #ifdef ELOG_FILE_FLUSH_CACHE_ENABLE
-    fflush(fp);
+    //fflush(fp);
 #endif
 
 __exit:
@@ -157,7 +164,7 @@ void elog_file_config(ElogFileCfg *cfg)
     elog_file_port_lock();
 
     if (fp) {
-        fclose(fp);
+        sys_lfs_file_close(fp);
         fp = NULL;
     }
 
@@ -166,8 +173,11 @@ void elog_file_config(ElogFileCfg *cfg)
         local_cfg.max_size = cfg->max_size;
         local_cfg.max_rotate = cfg->max_rotate;
 
-        if (local_cfg.name != NULL && strlen(local_cfg.name) > 0)
-            fp = fopen(local_cfg.name, "a+");
+        if (local_cfg.name != NULL && strlen(local_cfg.name) > 0){
+            //fp = fopen(local_cfg.name, "a+");
+            fp = &fileelog;
+            sys_lfs_file_open(fp,local_cfg.name, LFS_O_APPEND);
+        }
     }
 
     elog_file_port_unlock();
