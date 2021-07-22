@@ -25,6 +25,15 @@
  * Function:  Portable interface for EasyLogger's file log pulgin.
  * Created on: 2019-01-05
  */
+#include <stdio.h>
+#include <string.h>
+#include <ProjectConfig.h>
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <SEGGER_RTT.h>
+#include <debug.h>
+
+static xSemaphoreHandle xSemaphore_elog = NULL; 
 
 #include "elog_file.h"
 
@@ -38,7 +47,19 @@ ElogErrCode elog_file_port_init(void)
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
-
+    xSemaphore_elog = xSemaphoreCreateMutex();
+    if(xSemaphore_elog == NULL)
+    {
+        //err("xSemaphoreCreateMutex error\n");
+        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex elog file error\n");
+        result = -1;
+    }else
+    {
+        if(xSemaphoreGive(xSemaphore_elog) != pdTRUE)
+        {
+            SEGGER_RTT_printf(0, "warning: xSemaphoreGive elog file\n");
+        }
+    }
     return result;
 }
 
@@ -48,7 +69,11 @@ ElogErrCode elog_file_port_init(void)
 void elog_file_port_lock(void) {
 
     /* add your code here */
-
+    if(xSemaphore_elog != NULL)
+    {
+        //0 for in case of this been call in isr.
+        xSemaphoreTake(xSemaphore_elog,0);
+    }
 }
 
 /**
@@ -57,7 +82,10 @@ void elog_file_port_lock(void) {
 void elog_file_port_unlock(void) {
 
     /* add your code here */
-
+    if(xSemaphore_elog != NULL)
+    {
+        xSemaphoreGive(xSemaphore_elog);
+    }
 }
 
 /**
