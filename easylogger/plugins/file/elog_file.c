@@ -137,7 +137,7 @@ void elog_file_write(const char *log, size_t size)
 
     //fwrite(log, size, 1, fp);
     sys_lfs_file_write(fp, log, size);
-
+    sys_lfs_file_sync(fp);
 #ifdef ELOG_FILE_FLUSH_CACHE_ENABLE
     //fflush(fp);
 #endif
@@ -176,7 +176,7 @@ void elog_file_config(ElogFileCfg *cfg)
         if (local_cfg.name != NULL && strlen(local_cfg.name) > 0){
             //fp = fopen(local_cfg.name, "a+");
             fp = &fileelog;
-            sys_lfs_file_open(fp,local_cfg.name, LFS_O_APPEND);
+            sys_lfs_file_open(fp,local_cfg.name, LFS_O_CREAT | LFS_O_APPEND);
         }
     }
 

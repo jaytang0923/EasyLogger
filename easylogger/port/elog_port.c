@@ -90,7 +90,7 @@ void elog_port_output(const char *log, size_t size) {
 
 //#ifdef ELOG_FILE_ENABLE
     /* write the file */
-    //elog_file_write(log, size);
+    elog_file_write(log, size);
 //#endif
 }
 
