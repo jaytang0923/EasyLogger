@@ -35,6 +35,7 @@
 
 #include "elog_file.h"
 #include "sys_littlefs.h"
+#include "systick.h"
 
 /* initialize OK flag */
 static bool init_ok = false;
@@ -114,6 +115,7 @@ __exit:
 void elog_file_write(const char *log, size_t size)
 {
     size_t file_size = 0;
+    tick tks = get_tick(),tkssyn=0;
 
     ELOG_ASSERT(init_ok);
     ELOG_ASSERT(log);
@@ -137,12 +139,14 @@ void elog_file_write(const char *log, size_t size)
 
     //fwrite(log, size, 1, fp);
     sys_lfs_file_write(fp, log, size);
+    tkssyn = get_tick();
     sys_lfs_file_sync(fp);
 #ifdef ELOG_FILE_FLUSH_CACHE_ENABLE
     //fflush(fp);
 #endif
 
 __exit:
+    SEGGER_RTT_printf(0,"elog_file_write %dms %dms\n",get_tick()-tks,get_tick()-tkssyn);
     elog_file_port_unlock();
 }
 

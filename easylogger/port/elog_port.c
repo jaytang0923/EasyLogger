@@ -32,6 +32,10 @@
 #include <semphr.h>
 #include <SEGGER_RTT.h>
 #include <debug.h>
+#include <systick.h>
+#include <devicetest.h>
+#include <elog_file.h>
+#include <serial.h>
 
 static xSemaphoreHandle xSemaphore_elog = NULL; 
 
@@ -80,18 +84,28 @@ void elog_port_deinit(void) {
  * @param size log size
  */
 void elog_port_output(const char *log, size_t size) {
-    
     /* add your code here */
 #ifdef ELOG_TERMINAL_ENABLE
     SEGGER_RTT_printf(0,"%s",log);
 #endif
-    
-    usbserialwrite(log, size);
+    if(dbgusboutput())
+    {
+        usbserialwrite(log, size);
+    }
 
-//#ifdef ELOG_FILE_ENABLE
-    /* write the file */
-    elog_file_write(log, size);
-//#endif
+    if(dbgfileoutput())
+    {
+        static tick tksmax = 0;
+        tick tks=get_tick(),takems;
+        /* write the file */
+        elog_file_write(log, size);
+        takems = get_tick()-tks;
+        if(takems > tksmax)
+        {
+            tksmax = takems;
+            SEGGER_RTT_printf(0,"elog MAX Take %dms\n",tksmax);
+        }
+    }
 }
 
 /**
