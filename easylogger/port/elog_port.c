@@ -36,10 +36,28 @@
 #include <devicetest.h>
 #include <elog_file.h>
 #include <serial.h>
+#include <elog.h>
 
 static xSemaphoreHandle xSemaphore_elog = NULL; 
 
-#include <elog.h>
+ElogErrCode elog_port_init_lock(void)
+{
+    ElogErrCode result = ELOG_NO_ERR;
+    xSemaphore_elog = xSemaphoreCreateMutex();
+    if(xSemaphore_elog == NULL)
+    {
+        //err("xSemaphoreCreateMutex error\n");
+        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex error\n");
+        result = ELOG_ERR_INITLOCK;
+    }else
+    {
+        if(xSemaphoreGive(xSemaphore_elog) != pdTRUE)
+        {
+            SEGGER_RTT_printf(0, "warning: xSemaphoreGive elog_port_init_lock\n");
+        }
+    }
+    return result;
+}
 
 /**
  * EasyLogger port initialize
@@ -50,20 +68,7 @@ ElogErrCode elog_port_init(void) {
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
-    xSemaphore_elog = xSemaphoreCreateMutex();
-    if(xSemaphore_elog == NULL)
-    {
-        //err("xSemaphoreCreateMutex error\n");
-        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex error\n");
-        result = -1;
-    }else
-    {
-        if(xSemaphoreGive(xSemaphore_elog) != pdTRUE)
-        {
-            SEGGER_RTT_printf(0, "warning: xSemaphoreGive\n");
-        }
-        elog_file_init();
-    }
+    result = elog_file_init();
     return result;
 }
 

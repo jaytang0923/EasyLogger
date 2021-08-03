@@ -30,12 +30,30 @@
 #include <ProjectConfig.h>
 #include <FreeRTOS.h>
 #include <semphr.h>
+#include <sys_littlefs.h>
 #include <SEGGER_RTT.h>
 #include <debug.h>
-
-static xSemaphoreHandle xSemaphore_elog = NULL; 
-
 #include "elog_file.h"
+
+static xSemaphoreHandle xSemaphore_elogfile = NULL; 
+ElogErrCode elog_file_port_init_lock(void)
+{
+    ElogErrCode result = ELOG_NO_ERR;
+    xSemaphore_elogfile = xSemaphoreCreateMutex();
+    if(xSemaphore_elogfile == NULL)
+    {
+        //err("xSemaphoreCreateMutex error\n");
+        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex error\n");
+        result = ELOG_ERR_INITLOCK;
+    }else
+    {
+        if(xSemaphoreGive(xSemaphore_elogfile) != pdTRUE)
+        {
+            SEGGER_RTT_printf(0, "warning: xSemaphoreGive elog_file_port_init_lock\n");
+        }
+    }
+    return result;
+}
 
 /**
  * EasyLogger flile log pulgin port initialize
@@ -47,19 +65,7 @@ ElogErrCode elog_file_port_init(void)
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
-    xSemaphore_elog = xSemaphoreCreateMutex();
-    if(xSemaphore_elog == NULL)
-    {
-        //err("xSemaphoreCreateMutex error\n");
-        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex elog file error\n");
-        result = -1;
-    }else
-    {
-        if(xSemaphoreGive(xSemaphore_elog) != pdTRUE)
-        {
-            SEGGER_RTT_printf(0, "warning: xSemaphoreGive elog file\n");
-        }
-    }
+    checkAndCreateDir(ELOG_FILE_DIR);
     return result;
 }
 
@@ -69,10 +75,10 @@ ElogErrCode elog_file_port_init(void)
 void elog_file_port_lock(void) {
 
     /* add your code here */
-    if(xSemaphore_elog != NULL)
+    if(xSemaphore_elogfile != NULL)
     {
         //0 for in case of this been call in isr.
-        xSemaphoreTake(xSemaphore_elog,0);
+        xSemaphoreTake(xSemaphore_elogfile,0);
     }
 }
 
@@ -82,9 +88,9 @@ void elog_file_port_lock(void) {
 void elog_file_port_unlock(void) {
 
     /* add your code here */
-    if(xSemaphore_elog != NULL)
+    if(xSemaphore_elogfile != NULL)
     {
-        xSemaphoreGive(xSemaphore_elog);
+        xSemaphoreGive(xSemaphore_elogfile);
     }
 }
 

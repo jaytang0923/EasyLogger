@@ -30,6 +30,7 @@
 #define _ELOG_FILE_CFG_H_
 
 /* EasyLogger file log plugin's using file name */
+#define ELOG_FILE_DIR                  "/log"
 #define ELOG_FILE_NAME                 "/log/elog" /* @note you must define it for a value */
 
 /* EasyLogger file log plugin's using file max size */
