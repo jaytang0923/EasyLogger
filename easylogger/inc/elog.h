@@ -37,6 +37,21 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* output channel */
+typedef enum{
+    LOG_CH_NONE,
+    LOG_CH_FILE,
+    LOG_CH_USB,
+    LOG_CH_RTT
+} Log_Channel;
+
+typedef enum{
+    LOG_NONE,       //default level , output nothing,
+    LOG_ERR,        //only output error
+    LOG_WARN,       //only output error warning
+    LOG_INFO,       //only output error warning info
+    LOG_DEBUG,      //only output error warning info debug
+} Log_Level;
 
 /* output log's level */
 #define ELOG_LVL_ASSERT                      0
@@ -268,7 +283,8 @@ size_t elog_async_get_line_log(char *log, size_t size);
 size_t elog_strcpy(size_t cur_len, char *dst, const char *src);
 size_t elog_cpyln(char *line, const char *log, size_t len);
 void *elog_memcpy(void *dst, const void *src, size_t count);
-
+void elog_setchannel(Log_Channel channel);
+Log_Channel elog_getchannel(void);
 #ifdef __cplusplus
 }
 #endif

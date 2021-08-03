@@ -33,7 +33,6 @@
 #include <SEGGER_RTT.h>
 #include <debug.h>
 #include <systick.h>
-#include <devicetest.h>
 #include <elog_file.h>
 #include <serial.h>
 #include <elog.h>
@@ -82,6 +81,15 @@ void elog_port_deinit(void) {
 
 }
 
+static Log_Channel s_elogChannel = LOG_CH_NONE;
+void elog_setchannel(Log_Channel channel)
+{
+    s_elogChannel = channel;
+}
+Log_Channel elog_getchannel(void)
+{
+    return s_elogChannel;
+}
 /**
  * output log port interface
  *
@@ -90,26 +98,26 @@ void elog_port_deinit(void) {
  */
 void elog_port_output(const char *log, size_t size) {
     /* add your code here */
-#ifdef ELOG_TERMINAL_ENABLE
-    SEGGER_RTT_printf(0,"%s",log);
-#endif
-    if(dbgusboutput())
+    static tick tksmax = 0;
+    tick tks=get_tick(),takems;
+    switch (s_elogChannel)
     {
-        usbserialwrite(log, size);
-    }
-
-    if(dbgfileoutput())
-    {
-        static tick tksmax = 0;
-        tick tks=get_tick(),takems;
-        /* write the file */
-        elog_file_write(log, size);
-        takems = get_tick()-tks;
-        if(takems > tksmax)
-        {
-            tksmax = takems;
-            SEGGER_RTT_printf(0,"elog MAX Take %dms\n",tksmax);
-        }
+        case LOG_CH_RTT:
+            SEGGER_RTT_printf(0,"%s",log);
+        case LOG_CH_USB:
+            usbserialwrite((uint8_t*)log, size);
+        case LOG_CH_FILE:
+            /* write the file */
+            elog_file_write(log, size);
+            takems = get_tick()-tks;
+            if(takems > tksmax)
+            {
+                tksmax = takems;
+                dbg("elog MAX Take %dms\n",tksmax);
+            }
+            break;
+        default:
+            break;
     }
 }
 
