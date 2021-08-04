@@ -97,13 +97,17 @@ Log_Channel elog_getchannel(void)
  * @param log output of log
  * @param size log size
  */
-void elog_port_output(const char *log, size_t size) {
+void elog_port_output(char *log, size_t size) {
     /* add your code here */
     static tick tksmax = 0;
     tick tks=get_tick(),takems;
     switch (s_elogChannel)
     {
         case LOG_CH_RTT:
+            //FIXME:RTT   not support %.*s
+            if(size < ELOG_LINE_BUF_SIZE){
+                log[size] = 0;
+            }
             SEGGER_RTT_printf(0,"%s",log);
         case LOG_CH_USB:
             usbserialwrite((uint8_t*)log, size);

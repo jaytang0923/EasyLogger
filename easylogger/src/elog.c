@@ -146,7 +146,7 @@ static void elog_set_filter_tag_lvl_default(void);
 /* EasyLogger assert hook */
 void (*elog_assert_hook)(const char* expr, const char* func, size_t line);
 
-extern void elog_port_output(const char *log, size_t size);
+extern void elog_port_output( char *log, size_t size);
 extern void elog_port_output_lock(void);
 extern void elog_port_output_unlock(void);
 
