@@ -95,44 +95,45 @@ typedef enum{
     #define elog_debug(tag, ...)
     #define elog_verbose(tag, ...)
 #else /* ELOG_OUTPUT_ENABLE */
+    #define filename(x) strrchr(x,'\\')?strrchr(x,'\\')+1:x
     #if ELOG_OUTPUT_LVL >= ELOG_LVL_ASSERT
         #define elog_assert(tag, ...) \
-                elog_output(ELOG_LVL_ASSERT, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_ASSERT, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_assert(tag, ...)
     #endif /* ELOG_OUTPUT_LVL >= ELOG_LVL_ASSERT */
 
     #if ELOG_OUTPUT_LVL >= ELOG_LVL_ERROR
         #define elog_error(tag, ...) \
-                elog_output(ELOG_LVL_ERROR, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_ERROR, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_error(tag, ...)
     #endif /* ELOG_OUTPUT_LVL >= ELOG_LVL_ERROR */
 
     #if ELOG_OUTPUT_LVL >= ELOG_LVL_WARN
         #define elog_warn(tag, ...) \
-                elog_output(ELOG_LVL_WARN, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_WARN, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_warn(tag, ...)
     #endif /* ELOG_OUTPUT_LVL >= ELOG_LVL_WARN */
 
     #if ELOG_OUTPUT_LVL >= ELOG_LVL_INFO
         #define elog_info(tag, ...) \
-                elog_output(ELOG_LVL_INFO, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_INFO, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_info(tag, ...)
     #endif /* ELOG_OUTPUT_LVL >= ELOG_LVL_INFO */
 
     #if ELOG_OUTPUT_LVL >= ELOG_LVL_DEBUG
         #define elog_debug(tag, ...) \
-                elog_output(ELOG_LVL_DEBUG, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_DEBUG, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_debug(tag, ...)
     #endif /* ELOG_OUTPUT_LVL >= ELOG_LVL_DEBUG */
 
     #if ELOG_OUTPUT_LVL == ELOG_LVL_VERBOSE
         #define elog_verbose(tag, ...) \
-                elog_output(ELOG_LVL_VERBOSE, tag, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+                elog_output(ELOG_LVL_VERBOSE, tag, filename(__FILE__), __FUNCTION__, __LINE__, __VA_ARGS__)
     #else
         #define elog_verbose(tag, ...)
     #endif /* ELOG_OUTPUT_LVL == ELOG_LVL_VERBOSE */
@@ -229,7 +230,7 @@ void elog_hexdump(const char *name, uint8_t width, uint8_t *buf, uint16_t size);
  * NOTE: The `LOG_TAG` and `LOG_LVL` must defined before including the <elog.h> when you want to use log_x API.
  */
 #if !defined(LOG_TAG)
-    #define LOG_TAG          "NO_TAG"
+    #define LOG_TAG          "TAG"
 #endif
 #if !defined(LOG_LVL)
     #define LOG_LVL          ELOG_LVL_VERBOSE

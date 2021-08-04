@@ -36,6 +36,7 @@
 #include "elog_file.h"
 #include "sys_littlefs.h"
 #include "systick.h"
+#include "common.h"
 
 /* initialize OK flag */
 static bool init_ok = false;
@@ -75,7 +76,7 @@ static bool elog_file_rotate(void)
     char oldpath[256], newpath[256];
     size_t base = strlen(local_cfg.name);
     bool result = true;
-    FILE *tmp_fp;
+    tick tks = get_tick();
 
     memcpy(oldpath, local_cfg.name, base);
     memcpy(newpath, local_cfg.name, base);
@@ -86,6 +87,8 @@ static bool elog_file_rotate(void)
     for (n = local_cfg.max_rotate - 1; n >= 0; --n) {
         snprintf(oldpath + base, SUFFIX_LEN, n ? ".%d" : "", n - 1);
         snprintf(newpath + base, SUFFIX_LEN, ".%d", n);
+
+        #if 0
         /* remove the old file */
         if ((tmp_fp = fopen(newpath , "r")) != NULL) {
             fclose(tmp_fp);
@@ -96,7 +99,27 @@ static bool elog_file_rotate(void)
             fclose(tmp_fp);
             err = rename(oldpath, newpath);
         }
-
+        #else
+        /* remove the old file */
+        if(checkfileexist(newpath))
+        {
+            err = sys_lfs_remove(newpath);
+            if(err)
+            {
+                warn("remove newpath error:%d\n",newpath,err);
+            }
+        }
+        /* change the new log file to old file name */
+        if(checkfileexist(oldpath))
+        {
+            dbg("rename %s to %s\n",oldpath,newpath);
+            err = sys_lfs_rename(oldpath, newpath);
+            if(err)
+            {
+                warn("rename %s to %s error:%d\n",oldpath, newpath, err);
+            }
+        }
+        #endif
         if (err < 0) {
             result = false;
             goto __exit;
@@ -107,7 +130,13 @@ __exit:
     /* reopen the file */
     //fp = fopen(local_cfg.name, "a+");
     fp = &fileelog;
-    sys_lfs_file_open(fp, local_cfg.name, LFS_O_APPEND);
+    err = sys_lfs_file_open(fp, local_cfg.name, LFS_O_CREAT | LFS_O_APPEND);
+    if(err)
+    {
+        warn("open %s %d\n",local_cfg.name,err);
+        result = false;
+    }
+    dbg("rename take %d ms\n",get_tick()-tks);
     return result;
 }
 
@@ -126,7 +155,6 @@ void elog_file_write(const char *log, size_t size)
     sys_lfs_file_seek(fp, 0, LFS_SEEK_END);
     //file_size = ftell(fp);
     file_size = sys_lfs_file_tell(fp);
-
     if (unlikely(file_size > local_cfg.max_size)) {
 #if ELOG_FILE_MAX_ROTATE > 0
         if (!elog_file_rotate()) {
@@ -146,7 +174,7 @@ void elog_file_write(const char *log, size_t size)
 #endif
 
 __exit:
-    SEGGER_RTT_printf(0,"elog_file_write %dms %dms\n",get_tick()-tks,get_tick()-tkssyn);
+    dbg("elog_file_write %dB %dms %dms file_size=%d\n",size,get_tick()-tks,get_tick()-tkssyn,file_size);
     elog_file_port_unlock();
 }
 

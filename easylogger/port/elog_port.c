@@ -29,6 +29,7 @@
 #include <string.h>
 #include <ProjectConfig.h>
 #include <FreeRTOS.h>
+#include <task.h>
 #include <semphr.h>
 #include <SEGGER_RTT.h>
 #include <debug.h>
@@ -113,7 +114,7 @@ void elog_port_output(const char *log, size_t size) {
             if(takems > tksmax)
             {
                 tksmax = takems;
-                dbg("elog MAX Take %dms\n",tksmax);
+                warn("elog MAX Take %dms\n",tksmax);
             }
             break;
         default:
@@ -154,7 +155,8 @@ void elog_port_output_unlock(void) {
 const char *elog_port_get_time(void) {
     
     /* add your code here */
-    static char cur_system_time[16] = { 0 };
+    static char cur_system_time[10] = { 0 };
+    //FIXME:check the max time
     sprintf(cur_system_time, "%06d.%03d", get_tick()/1000,get_tick()%1000);
     return cur_system_time;
 }
@@ -178,5 +180,8 @@ const char *elog_port_get_p_info(void) {
 const char *elog_port_get_t_info(void) {
     
     /* add your code here */
-    return "";
+    TaskHandle_t handle =  xTaskGetCurrentTaskHandle();
+    ELOG_ASSERT(handle != NULL);
+    ELOG_ASSERT(pcTaskGetName(handle) != NULL);
+    return pcTaskGetName(handle);
 }
