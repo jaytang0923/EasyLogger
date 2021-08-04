@@ -130,7 +130,7 @@ __exit:
     /* reopen the file */
     //fp = fopen(local_cfg.name, "a+");
     fp = &fileelog;
-    err = sys_lfs_file_open(fp, local_cfg.name, LFS_O_CREAT | LFS_O_APPEND);
+    err = sys_lfs_file_open(fp, local_cfg.name, LFS_O_CREAT | LFS_O_APPEND | LFS_O_RDWR);
     if(err)
     {
         warn("open %s %d\n",local_cfg.name,err);
@@ -208,7 +208,7 @@ void elog_file_config(ElogFileCfg *cfg)
         if (local_cfg.name != NULL && strlen(local_cfg.name) > 0){
             //fp = fopen(local_cfg.name, "a+");
             fp = &fileelog;
-            sys_lfs_file_open(fp,local_cfg.name, LFS_O_CREAT | LFS_O_APPEND);
+            sys_lfs_file_open(fp,local_cfg.name, LFS_O_CREAT | LFS_O_APPEND | LFS_O_RDWR);
         }
     }
 
