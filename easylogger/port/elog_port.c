@@ -37,8 +37,17 @@
 #include <elog_file.h>
 #include <serial.h>
 #include <elog.h>
+#include <common.h>
 
 static xSemaphoreHandle xSemaphore_elog = NULL; 
+typedef struct
+{
+    Log_Channel channel;    //use to set the output channel
+    uint8_t level;          //just use to save the elog.filter.level to file
+} elog_cfg_str;
+
+//default output to NONE.
+static elog_cfg_str elogcfg = { LOG_CH_NONE, ELOG_LVL_ASSERT};
 
 ElogErrCode elog_port_init_lock(void)
 {
@@ -60,6 +69,36 @@ ElogErrCode elog_port_init_lock(void)
 }
 
 /**
+ * @fn          int loadelogconfig(void)
+ * @brief       load elog config from ELOG_FILE_CFG
+ * 
+ * @param[in]   void  
+ * @return      int
+ */
+int elog_port_loadconfig(void)
+{
+    elog_cfg_str readcfg;
+    int ret;
+    ret = readfile(ELOG_FILE_CFG, (void *)&readcfg, sizeof(readcfg));
+    if(ret == sizeof(readcfg))
+    {
+        if(readcfg.channel <= LOG_CH_RTT)
+        {
+            elogcfg.channel = readcfg.channel;
+        }
+        if(readcfg.level <= ELOG_LVL_VERBOSE)
+        {
+            elog_set_filter_lvl(readcfg.level);
+            elogcfg.level = readcfg.level;
+        }
+        dbg("elog_port_loadconfig channel:%d level:%d\n",elogcfg.channel, elogcfg.level);
+        return 0;
+    }
+    return -1;
+}
+
+
+/**
  * EasyLogger port initialize
  *
  * @return result
@@ -68,7 +107,9 @@ ElogErrCode elog_port_init(void) {
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
+    //mkdir /log here
     result = elog_file_init();
+
     return result;
 }
 
@@ -82,15 +123,62 @@ void elog_port_deinit(void) {
 
 }
 
-static Log_Channel s_elogChannel = LOG_CH_NONE;
-void elog_setchannel(Log_Channel channel)
+/**
+ * @fn          int updateelogconfig(void)
+ * @brief       save the elog config to ELOG_FILE_CFG
+ * 
+ * @param[in]   void  
+ * @return      int
+                0 : success
+               -1 : fail
+ */
+static int updateelogconfig(void)
 {
-    s_elogChannel = channel;
+    int ret;    
+    dbg("updateelogconfig");
+    if(checkfileexist(ELOG_FILE_CFG) == 0)
+    {
+        //create
+        ret = createfile(ELOG_FILE_CFG,(void*)&elogcfg, sizeof(elogcfg));
+    }else{
+        //update
+        ret = updatefile(ELOG_FILE_CFG,(void*)&elogcfg, sizeof(elogcfg));
+    }
+    
+    if(ret)
+    {
+        err("updateelogconfig error\n");
+    }
+    return ret;
 }
-Log_Channel elog_getchannel(void)
+
+void elog_port_setchannel(Log_Channel channel)
 {
-    return s_elogChannel;
+    if(elogcfg.channel == channel)
+        return;
+    elogcfg.channel = channel;
+    updateelogconfig();
 }
+Log_Channel elog_port_getchannel(void)
+{
+    return elogcfg.channel;
+}
+
+void elog_port_setlevel(uint8_t lv)
+{
+    elog_set_filter_lvl(lv);
+    if(elogcfg.level == lv)
+    {
+        return;
+    }
+    elogcfg.level = lv;
+    updateelogconfig();
+}
+uint8_t elog_port_getlevel(void)
+{
+    return elogcfg.level;
+}
+
 /**
  * output log port interface
  *
@@ -101,7 +189,7 @@ void elog_port_output(char *log, size_t size) {
     /* add your code here */
     static tick tksmax = 0;
     tick tks=get_tick(),takems;
-    switch (s_elogChannel)
+    switch (elogcfg.channel)
     {
         case LOG_CH_RTT:
             //FIXME:RTT   not support %.*s

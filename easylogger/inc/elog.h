@@ -285,6 +285,8 @@ size_t elog_strcpy(size_t cur_len, char *dst, const char *src);
 size_t elog_cpyln(char *line, const char *log, size_t len);
 void *elog_memcpy(void *dst, const void *src, size_t count);
 void elog_setchannel(Log_Channel channel);
+void elog_setlevel(uint8_t lv);
+uint8_t elog_getlevel(void);
 Log_Channel elog_getchannel(void);
 #ifdef __cplusplus
 }

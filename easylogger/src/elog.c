@@ -158,6 +158,7 @@ extern void elog_port_output_unlock(void);
 ElogErrCode elog_init(void) {
     extern ElogErrCode elog_port_init(void);
     extern ElogErrCode elog_async_init(void);
+    extern int elog_port_loadconfig(void);
 
     ElogErrCode result = ELOG_NO_ERR;
 
@@ -197,6 +198,10 @@ ElogErrCode elog_init(void) {
 
     elog.init_ok = true;
 
+    /* load elog ELOG_FILE_CFG*/
+    elog_port_output_lock();
+    elog_port_loadconfig();
+    elog_port_output_unlock();
     return result;
 }
 
@@ -919,3 +924,32 @@ void elog_hexdump(const char *name, uint8_t width, uint8_t *buf, uint16_t size)
     /* unlock output */
     elog_output_unlock();
 }
+
+extern void elog_port_setchannel(Log_Channel channel);
+extern Log_Channel elog_port_getchannel(void);
+extern void elog_port_setlevel(uint8_t lv);
+extern uint8_t elog_port_getlevel(void);
+void elog_setchannel(Log_Channel channel)
+{
+    elog_port_output_lock();
+    elog_port_setchannel(channel);
+    elog_port_output_unlock();
+}
+
+Log_Channel elog_getchannel(void)
+{
+    return elog_port_getchannel();
+}
+
+void elog_setlevel(uint8_t lv)
+{
+    elog_port_output_lock();
+    elog_port_setlevel(lv);
+    elog_port_output_unlock();
+}
+
+uint8_t elog_getlevel(void)
+{
+    return elog_port_getlevel();
+}
+

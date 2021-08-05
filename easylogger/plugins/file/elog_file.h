@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 /* EasyLogger file log plugin's software version number */
-#define ELOG_FILE_SW_VERSION                "V1.0.0"
+#define ELOG_FILE_SW_VERSION                "V1.1.0"
 #ifdef linux
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
