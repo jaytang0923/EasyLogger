@@ -91,7 +91,7 @@ int elog_port_loadconfig(void)
             elog_set_filter_lvl(readcfg.level);
             elogcfg.level = readcfg.level;
         }
-        dbg("elog_port_loadconfig channel:%d level:%d\n",elogcfg.channel, elogcfg.level);
+        dbg("elog_port_loadconfig channel:%d level:%d  %d %d\n",elogcfg.channel, elogcfg.level,readcfg.channel,readcfg.level);
         return 0;
     }
     return -1;
@@ -155,12 +155,15 @@ static int updateelogconfig(void)
 int elog_port_setchannel(Log_Channel channel)
 {
     int ret;
+    Log_Channel oldchan = elogcfg.channel;
     if(elogcfg.channel == channel)
         return 0;
+    
+    elogcfg.channel = channel;
     ret = updateelogconfig();
-    if(ret == 0)
+    if(ret)
     {
-        elogcfg.channel = channel;
+        elogcfg.channel = oldchan;
     }
     return ret;
 }
@@ -172,17 +175,21 @@ Log_Channel elog_port_getchannel(void)
 int elog_port_setlevel(uint8_t lv)
 {
     int ret;
+    uint8_t oldlevel = elogcfg.level;
     if(elogcfg.level == lv)
     {
         //make sure the elog filter sync
         elog_set_filter_lvl(lv);
         return 0;
     }
+
+    elogcfg.level = lv;
+    elog_set_filter_lvl(lv);
     ret = updateelogconfig();
-    if(ret == 0)
+    if(ret)
     {
-        elogcfg.level = lv;
-        elog_set_filter_lvl(lv);
+        elogcfg.level = oldlevel;
+        elog_set_filter_lvl(oldlevel);
     }
     return ret;
 }
