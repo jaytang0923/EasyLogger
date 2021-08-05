@@ -48,9 +48,10 @@ typedef enum{
 typedef enum{
     LOG_NONE,       //default level , output nothing,
     LOG_ERR,        //only output error
-    LOG_WARN,       //only output error warning
-    LOG_INFO,       //only output error warning info
-    LOG_DEBUG,      //only output error warning info debug
+    LOG_WARN,       //only output warning
+    LOG_INFO,       //only output warning info
+    LOG_DEBUG,      //only output warning info debug
+    LOG_VERBOSE,    //output verbose
 } Log_Level;
 
 /* output log's level */
