@@ -925,15 +925,17 @@ void elog_hexdump(const char *name, uint8_t width, uint8_t *buf, uint16_t size)
     elog_output_unlock();
 }
 
-extern void elog_port_setchannel(Log_Channel channel);
+extern int elog_port_setchannel(Log_Channel channel);
 extern Log_Channel elog_port_getchannel(void);
-extern void elog_port_setlevel(uint8_t lv);
+extern int elog_port_setlevel(uint8_t lv);
 extern uint8_t elog_port_getlevel(void);
-void elog_setchannel(Log_Channel channel)
+int elog_setchannel(Log_Channel channel)
 {
+    int ret;
     elog_port_output_lock();
-    elog_port_setchannel(channel);
+    ret = elog_port_setchannel(channel);
     elog_port_output_unlock();
+    return ret;
 }
 
 Log_Channel elog_getchannel(void)
@@ -941,11 +943,13 @@ Log_Channel elog_getchannel(void)
     return elog_port_getchannel();
 }
 
-void elog_setlevel(uint8_t lv)
+int elog_setlevel(uint8_t lv)
 {
+    int ret;
     elog_port_output_lock();
-    elog_port_setlevel(lv);
+    ret = elog_port_setlevel(lv);
     elog_port_output_unlock();
+    return ret;
 }
 
 uint8_t elog_getlevel(void)

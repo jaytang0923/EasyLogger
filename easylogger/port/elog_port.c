@@ -152,27 +152,39 @@ static int updateelogconfig(void)
     return ret;
 }
 
-void elog_port_setchannel(Log_Channel channel)
+int elog_port_setchannel(Log_Channel channel)
 {
+    int ret;
     if(elogcfg.channel == channel)
-        return;
-    elogcfg.channel = channel;
-    updateelogconfig();
+        return 0;
+    ret = updateelogconfig();
+    if(ret == 0)
+    {
+        elogcfg.channel = channel;
+    }
+    return ret;
 }
 Log_Channel elog_port_getchannel(void)
 {
     return elogcfg.channel;
 }
 
-void elog_port_setlevel(uint8_t lv)
+int elog_port_setlevel(uint8_t lv)
 {
-    elog_set_filter_lvl(lv);
+    int ret;
     if(elogcfg.level == lv)
     {
-        return;
+        //make sure the elog filter sync
+        elog_set_filter_lvl(lv);
+        return 0;
     }
-    elogcfg.level = lv;
-    updateelogconfig();
+    ret = updateelogconfig();
+    if(ret == 0)
+    {
+        elogcfg.level = lv;
+        elog_set_filter_lvl(lv);
+    }
+    return ret;
 }
 uint8_t elog_port_getlevel(void)
 {
