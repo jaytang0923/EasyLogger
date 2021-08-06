@@ -242,7 +242,7 @@ void elog_port_output_lock(void) {
     if(xSemaphore_elog != NULL)
     {
         //0 for in case of this been call in isr.
-        xSemaphoreTake(xSemaphore_elog,0);
+        xSemaphoreTake(xSemaphore_elog, portMAX_DELAY);
     }
 }
 
