@@ -27,31 +27,55 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <ProjectConfig.h>
-#include <FreeRTOS.h>
-#include <semphr.h>
-#include <sys_littlefs.h>
-#include <SEGGER_RTT.h>
-#include <debug.h>
 #include "elog_file.h"
+#ifdef FREERTOS
+    #include <ProjectConfig.h>
+    #include <FreeRTOS.h>
+    #include <semphr.h>
+    #include <sys_littlefs.h>
+    #include <SEGGER_RTT.h>
+    #include <debug.h>
+#elif defined QL_EC600U
+    #include "ql_api_osi.h"
+    #include <ql_fs.h>
+    #include <hal_common.h>
+#else
+    #error "easy logger need define platform first"
+#endif
 
-static xSemaphoreHandle xSemaphore_elogfile = NULL; 
+#ifdef FREERTOS
+    static xSemaphoreHandle xSemaphore_elogfile = NULL;
+#elif defined QL_EC600U
+    static ql_mutex_t s_mutexLock;
+#endif
 ElogErrCode elog_file_port_init_lock(void)
 {
     ElogErrCode result = ELOG_NO_ERR;
+#ifdef FREERTOS
     xSemaphore_elogfile = xSemaphoreCreateMutex();
-    if(xSemaphore_elogfile == NULL)
+
+    if (xSemaphore_elogfile == NULL)
     {
         //err("xSemaphoreCreateMutex error\n");
-        SEGGER_RTT_printf(0,"xSemaphoreCreateMutex error\n");
+        SEGGER_RTT_printf(0, "xSemaphoreCreateMutex error\n");
         result = ELOG_ERR_INITLOCK;
-    }else
+    }
+    else
     {
-        if(xSemaphoreGive(xSemaphore_elogfile) != pdTRUE)
+        if (xSemaphoreGive(xSemaphore_elogfile) != pdTRUE)
         {
             SEGGER_RTT_printf(0, "warning: xSemaphoreGive elog_file_port_init_lock\n");
         }
     }
+
+#elif defined QL_EC600U
+
+    if (ql_rtos_mutex_create(&s_mutexLock))
+    {
+        result = ELOG_ERR_INITLOCK;
+    }
+
+#endif
     return result;
 }
 
@@ -65,40 +89,57 @@ ElogErrCode elog_file_port_init(void)
     ElogErrCode result = ELOG_NO_ERR;
 
     /* add your code here */
-    checkAndCreateDir(ELOG_FILE_DIR);
+    if (checkAndCreateDir(ELOG_FILE_DIR))
+    {
+        result = -1;
+    }
+
     return result;
 }
 
 /**
  * file log lock
  */
-void elog_file_port_lock(void) {
-
+void elog_file_port_lock(void)
+{
     /* add your code here */
-    if(xSemaphore_elogfile != NULL)
+#ifdef FREERTOS
+    if (xSemaphore_elogfile != NULL)
     {
         //0 for in case of this been call in isr.
         xSemaphoreTake(xSemaphore_elogfile, portMAX_DELAY);
     }
+
+#elif defined QL_EC600U
+    ql_rtos_mutex_try_lock(s_mutexLock);
+#endif
 }
 
 /**
  * file log unlock
  */
-void elog_file_port_unlock(void) {
-
+void elog_file_port_unlock(void)
+{
     /* add your code here */
-    if(xSemaphore_elogfile != NULL)
+#ifdef FREERTOS
+    if (xSemaphore_elogfile != NULL)
     {
         xSemaphoreGive(xSemaphore_elogfile);
     }
+
+#elif defined QL_EC600U
+    ql_rtos_mutex_unlock(s_mutexLock);
+#endif
 }
 
 /**
  * file log deinit
  */
-void elog_file_port_deinit(void) {
-
+void elog_file_port_deinit(void)
+{
     /* add your code here */
-
+#ifdef FREERTOS
+#elif defined QL_EC600U
+    ql_rtos_mutex_delete(s_mutexLock);
+#endif
 }

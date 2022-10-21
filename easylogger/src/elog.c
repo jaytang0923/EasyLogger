@@ -197,11 +197,6 @@ ElogErrCode elog_init(void) {
     elog_set_filter_tag_lvl_default();
 
     elog.init_ok = true;
-
-    /* load elog ELOG_FILE_CFG*/
-    elog_port_output_lock();
-    elog_port_loadconfig();
-    elog_port_output_unlock();
     return result;
 }
 

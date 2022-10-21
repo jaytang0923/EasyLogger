@@ -26,22 +26,34 @@
  * Created on: 2019-01-05
  */
 
- #define LOG_TAG    "elog.file"
+#define LOG_TAG    "elog.file"
 
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "elog_file.h"
-#include "sys_littlefs.h"
-#include "systick.h"
-#include "common.h"
+
+#ifdef QL_EC600U
+#include "hal_fs.h"
+
+#define FOPEN  fOpen
+#define FCLOSE fClose
+#define FSEEK  fSeek
+#define FTELL  fTell
+#define FWRITE fWrite
+#define REMOVE Remove
+#define RENAME Rename
+static QFILE fp = 0;
+#undef NULL
+#define NULL   0
+#else
+static FILE *fp = NULL;
+#endif
 
 /* initialize OK flag */
 static bool init_ok = false;
-//static FILE *fp = NULL;
-static lfs_file_t fileelog,*fp = NULL;
 static ElogFileCfg local_cfg;
 
 ElogErrCode elog_file_init(void)
@@ -76,50 +88,31 @@ static bool elog_file_rotate(void)
     char oldpath[256], newpath[256];
     size_t base = strlen(local_cfg.name);
     bool result = true;
-    tick tks = get_tick();
+    #ifdef QL_EC600U
+    QFILE tmp_fp;
+    #else
+    FILE *tmp_fp;
+    #endif
 
     memcpy(oldpath, local_cfg.name, base);
     memcpy(newpath, local_cfg.name, base);
 
-    //fclose(fp);
-    sys_lfs_file_close(fp);
+    FCLOSE(fp);
 
     for (n = local_cfg.max_rotate - 1; n >= 0; --n) {
         snprintf(oldpath + base, SUFFIX_LEN, n ? ".%d" : "", n - 1);
         snprintf(newpath + base, SUFFIX_LEN, ".%d", n);
+        /* remove the old file */
+        if ((tmp_fp = FOPEN(newpath , "r")) != NULL) {
+            FCLOSE(tmp_fp);
+            REMOVE(newpath);
+        }
+        /* change the new log file to old file name */
+        if ((tmp_fp = FOPEN(oldpath , "r")) != NULL) {
+            FCLOSE(tmp_fp);
+            err = RENAME(oldpath, newpath);
+        }
 
-        #if 0
-        /* remove the old file */
-        if ((tmp_fp = fopen(newpath , "r")) != NULL) {
-            fclose(tmp_fp);
-            remove(newpath);
-        }
-        /* change the new log file to old file name */
-        if ((tmp_fp = fopen(oldpath , "r")) != NULL) {
-            fclose(tmp_fp);
-            err = rename(oldpath, newpath);
-        }
-        #else
-        /* remove the old file */
-        if(checkfileexist(newpath))
-        {
-            err = sys_lfs_remove(newpath);
-            if(err)
-            {
-                warn("remove newpath error:%d\n",newpath,err);
-            }
-        }
-        /* change the new log file to old file name */
-        if(checkfileexist(oldpath))
-        {
-            dbg("rename %s to %s\n",oldpath,newpath);
-            err = sys_lfs_rename(oldpath, newpath);
-            if(err)
-            {
-                warn("rename %s to %s error:%d\n",oldpath, newpath, err);
-            }
-        }
-        #endif
         if (err < 0) {
             result = false;
             goto __exit;
@@ -128,15 +121,8 @@ static bool elog_file_rotate(void)
 
 __exit:
     /* reopen the file */
-    //fp = fopen(local_cfg.name, "a+");
-    fp = &fileelog;
-    err = sys_lfs_file_open(fp, local_cfg.name, LFS_O_CREAT | LFS_O_APPEND | LFS_O_RDWR);
-    if(err)
-    {
-        warn("open %s %d\n",local_cfg.name,err);
-        result = false;
-    }
-    dbg("rename take %d ms\n",get_tick()-tks);
+    fp = FOPEN(local_cfg.name, "a+");
+
     return result;
 }
 
@@ -144,17 +130,15 @@ __exit:
 void elog_file_write(const char *log, size_t size)
 {
     size_t file_size = 0;
-    tick tks = get_tick(),tkssyn=0;
 
     ELOG_ASSERT(init_ok);
     ELOG_ASSERT(log);
 
     elog_file_port_lock();
 
-    //fseek(fp, 0L, SEEK_END);
-    sys_lfs_file_seek(fp, 0, LFS_SEEK_END);
-    //file_size = ftell(fp);
-    file_size = sys_lfs_file_tell(fp);
+    FSEEK(fp, 0L, SEEK_END);
+    file_size = FTELL(fp);
+
     if (unlikely(file_size > local_cfg.max_size)) {
 #if ELOG_FILE_MAX_ROTATE > 0
         if (!elog_file_rotate()) {
@@ -165,16 +149,13 @@ void elog_file_write(const char *log, size_t size)
 #endif
     }
 
-    //fwrite(log, size, 1, fp);
-    sys_lfs_file_write(fp, log, size);
-    tkssyn = get_tick();
-    sys_lfs_file_sync(fp);
+    FWRITE((unsigned char*)log, size, 1, fp);
+
 #ifdef ELOG_FILE_FLUSH_CACHE_ENABLE
-    //fflush(fp);
+    fflush(fp);
 #endif
 
 __exit:
-    dbg("elog_file_write %dB %dms %dms file_size=%d\n",size,get_tick()-tks,get_tick()-tkssyn,file_size);
     elog_file_port_unlock();
 }
 
@@ -196,7 +177,7 @@ void elog_file_config(ElogFileCfg *cfg)
     elog_file_port_lock();
 
     if (fp) {
-        sys_lfs_file_close(fp);
+        FCLOSE(fp);
         fp = NULL;
     }
 
@@ -205,11 +186,8 @@ void elog_file_config(ElogFileCfg *cfg)
         local_cfg.max_size = cfg->max_size;
         local_cfg.max_rotate = cfg->max_rotate;
 
-        if (local_cfg.name != NULL && strlen(local_cfg.name) > 0){
-            //fp = fopen(local_cfg.name, "a+");
-            fp = &fileelog;
-            sys_lfs_file_open(fp,local_cfg.name, LFS_O_CREAT | LFS_O_APPEND | LFS_O_RDWR);
-        }
+        if (local_cfg.name != NULL && strlen(local_cfg.name) > 0)
+            fp = FOPEN(local_cfg.name, "a+");
     }
 
     elog_file_port_unlock();

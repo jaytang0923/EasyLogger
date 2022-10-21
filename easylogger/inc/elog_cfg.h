@@ -28,9 +28,21 @@
 
 #ifndef _ELOG_CFG_H_
 #define _ELOG_CFG_H_
+
+// #define FREERTOS
+#define QL_EC600U
+#ifdef QL_EC600U
+#include "ql_api_osi.h"
+#include <hal_fs.h>
+#endif
+
 /*---------------------------------------------------------------------------*/
 /* enable log output. */
 #define ELOG_OUTPUT_ENABLE
+/* enable terminal output. default open this macro */
+#define ELOG_TERMINAL_ENABLE
+/* enable log write file. default open this macro */
+#define ELOG_FILE_ENABLE
 /* setting static output log level. range: from ELOG_LVL_ASSERT to ELOG_LVL_VERBOSE */
 #define ELOG_OUTPUT_LVL                          ELOG_LVL_VERBOSE
 /* enable assert check */
